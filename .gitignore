@@ -24,5 +24,7 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 .Rproj.user
-*.*
+Weekly-PSI/*
+!Weekly-PSI/*.txt
+# *.*
 
