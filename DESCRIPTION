@@ -5,6 +5,8 @@ Authors@R: c(person("Hugh", "Parsonage", email = "hugh.parsonage@gmail.com", rol
              person(family = "NSW Valuer General", role = "cph"))
 Description: What the package does (one paragraph).
 Depends: R (>= 3.4.0)
+Imports: data.table
 License: CC BY 4.0
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.0.1
