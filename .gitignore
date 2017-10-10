@@ -26,5 +26,7 @@ vignettes/*.pdf
 .Rproj.user
 Weekly-PSI/*
 !Weekly-PSI/*.txt
+*.DAT
+*.zip
 # *.*
 
