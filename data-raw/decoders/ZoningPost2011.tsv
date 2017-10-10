@@ -1,0 +1,35 @@
+Zone_Cd_2011	Zoning	Zone_Cd_pre2011
+RU1	Primary Production	R
+RU2	Rural Landscape	R
+RU3	Forestry	R
+RU4	Rural Small Holdings	R
+RU5	Village	A
+RU6	Transition	R
+R1	General Residential	A
+R2	Low Density Residential	A
+R3	Medium Density Residential	A
+R4	High Density Residential	A
+R5	Large Lot Residential	A
+B1	Neighbourhood Centre	B
+B2	Local Centre	B
+B3	Commercial Core	B
+B4	Mixed Use	B
+B5	Business Development	B
+B6	Enterprise Corridor	B
+B7	Business Park	B
+IN1	General Industrial	I
+IN2	Light Industrial	I
+IN3	Heavy Industrial	I
+IN4	Working Waterfront	I
+SP1	Special Activities	O
+SP2	Infrastructure	O
+SP3	Tourist	O
+RE1	Public Recreation	O
+RE2	Private Recreation	O
+E1	National Parks and NatureReserves	R
+E2	Environmental Conservation	R
+E3	Environmental Management	R
+E4	Environmental Living	R
+W1	Natural Waterways	R
+W2	Recreational Waterways	O
+W3	Working Waterways	I
