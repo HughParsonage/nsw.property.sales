@@ -1,0 +1,10 @@
+Package: nsw.property.sales
+Title: Provides Property Sale and Land Value Data from the New South Wales Valuer-General
+Version: 0.1
+Authors@R: c(person("Hugh", "Parsonage", email = "hugh.parsonage@gmail.com", role = c("aut", "cre")),
+             person(family = "NSW Valuer General", role = "cph"))
+Description: What the package does (one paragraph).
+Depends: R (>= 3.4.0)
+License: CC BY 4.0
+Encoding: UTF-8
+LazyData: true
