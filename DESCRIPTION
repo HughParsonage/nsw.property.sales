@@ -3,7 +3,7 @@ Title: Provides Property Sale and Land Value Data from the New South Wales Value
 Version: 0.1
 Authors@R: c(person("Hugh", "Parsonage", email = "hugh.parsonage@gmail.com", role = c("aut", "cre")),
              person(family = "NSW Valuer General", role = "cph"))
-Description: What the package does (one paragraph).
+Description: Provides data in tidy form from the NSW Valuer-General.
 Depends: R (>= 3.4.0)
 Imports: data.table
 License: CC BY 4.0

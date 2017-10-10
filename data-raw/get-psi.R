@@ -343,5 +343,5 @@ PropertySales20012017[, "Dealing_no" := NULL]
 set_cols_first(PropertySales20012017, c("Settlement_date", "Property_id"))
 
 
-devtools::use_data(PropertySales20012017)
+devtools::use_data(PropertySales20012017, overwrite = TRUE, compress = "xz")
 
