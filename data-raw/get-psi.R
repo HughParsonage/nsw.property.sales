@@ -3,6 +3,7 @@ library(data.table)
 library(lubridate)
 library(hutils)
 
+stopifnot("DESCRIPTION" %in% list.files())
 provide.dir("./data-raw/Weekly-PSI")
 
 # http://www.valuergeneral.nsw.gov.au/__psi/weekly/20170821.zip
@@ -16,11 +17,14 @@ get_psi <- function(week) {
   ex_dir <- file.path("data-raw", "Weekly-PSI", yr)
   provide.dir(ex_dir)
   dest_file <- file.path("data-raw", "Weekly-PSI", yr, paste0(wk, ".zip"))
-  if (!file.exists(dest_file)) {
+  if (!file.exists(dest_file) && wk != "2017-04-10") {
     remote.zip <- paste0("http://www.valuergeneral.nsw.gov.au/__psi/weekly/", gsub("-", "", wk), ".zip")
     tryCatch(download.file(url = remote.zip, destfile = dest_file, quiet = TRUE),
+             # e.g. 2017-04-10 does not exist
              error = function(e) cat(e$message))
-    unzip(dest_file, exdir = ex_dir)
+    if (file.exists(dest_file)) {
+      unzip(dest_file, exdir = ex_dir)
+    }
   }
 }
 
@@ -42,12 +46,17 @@ get_yearly_psi <- function(yr) {
              error = function(e) stop(e$message))
     # unzip(dest_file, exdir = ex_dir)
   }
+
   setwd(ex_dir)
+  if (length(list.files(recursive = TRUE)) == 0) {
+    cat(ex_dir)
+    stop("zip file ", ex_dir, ".zip must be unzipped manually")
+  }
+
   if (yr %between% c(2001, 2016)) {
     current_wd2 <- getwd()
     for (the_dir in list.dirs(recursive = TRUE, full.names = TRUE)) {
       setwd(the_dir)
-      on.exit(setwd(current_wd2))
       if (AND(!file.exists("ALL-B.txt"),
               length(list.files(pattern = "\\.DAT$")) > 2)) {
         # Progress
@@ -131,6 +140,7 @@ post2001fread_dat <- function(filename, v1 = "B") {
     setnames(dat, 22, "Sale_code")
     setnames(dat, 23, "Percent_interest_of_sale")
     if (is.logical(dat[["Percent_interest_of_sale"]])) {
+      # Missing so assumed to be 100%
       dat[, Percent_interest_of_sale := as.integer(Percent_interest_of_sale)]
       dat[, Percent_interest_of_sale := as.integer(100L)]
     } else {
@@ -138,6 +148,22 @@ post2001fread_dat <- function(filename, v1 = "B") {
     }
 
     setnames(dat, 24, "Dealing_no")
+
+    if (AND(v1 == "B",
+            # If Zone_Cd is blank, it has been dropped
+            # and so the following (pointless) join
+            # will error.
+            any(c("Zone_Cd_pre2011",
+                  "Zone_Cd_2011") %chin% names(dat)))) {
+      if (DIR_YEAR < "2011") {
+        ZoningDecoder <- fread("data-raw/decoders/ZoningPre2011.tsv")
+        dat <- ZoningDecoder[dat, on = "Zone_Cd_pre2011"]
+      } else {
+        ZoningDecoder <- fread("data-raw/decoders/ZoningPost2011.tsv")
+        dat <- ZoningDecoder[dat, on = "Zone_Cd_2011"]
+      }
+      drop_cols(dat, c("Zone_Cd_2011", "Zone_Cd_pre2011"))
+    }
   }
 
   if (v1 == "C") {
@@ -230,29 +256,15 @@ pre2001_fread_dat <- function(filename, v1 = "B") {
           # will error.
           any(c("Zone_Cd_pre2011",
                 "Zone_Cd_2011") %chin% names(dat)))) {
-    if (DIR_YEAR < "2011") {
+
       ZoningDecoder <- fread("data-raw/decoders/ZoningPre2011.tsv")
       dat <- ZoningDecoder[dat, on = "Zone_Cd_pre2011"]
-    } else {
-      ZoningDecoder <- fread("data-raw/decoders/ZoningPost2011.tsv")
-      dat <- ZoningDecoder[dat, on = "Zone_Cd_2011"]
-    }
     drop_cols(dat, c("Zone_Cd_2011", "Zone_Cd_pre2011"))
   }
   # if (runif(1) < 0.01) cat(".")
 
   dat
 }
-
-dat2017B <-
-  list.files(path = "data-raw/Weekly-PSI/2017/",
-             pattern = "\\.DAT$",
-             full.names = TRUE) %>%
-  lapply(fread_dat,
-         v1 = "B") %>%
-  rbindlist(use.names = TRUE, fill = TRUE) %>%
-  drop_empty_cols %>%
-  drop_col("Record_type")
 
 post2001_Bfiles <-
   lapply(2001:2017,
@@ -264,31 +276,72 @@ post2001_Bfiles <-
          }) %>%
   unlist
 
-PropertySales20012017 <- list(length(post2001_Bfiles))
+PropertySales20012017.list <- list(length(post2001_Bfiles))
 # Don't use lapply to make it easier to debug
 for (ff in seq_along(post2001_Bfiles)) {
-  cat(ff)
-  PropertySales20012017[[ff]] <- post2001fread_dat(file = post2001_Bfiles[[ff]])
-  cat("\n")
+  if (ff %% 100 == 0) {
+    cat("\n")
+  } else {
+    cat(" ")
+  }
+  cat(ff %% 100)
+  PropertySales20012017.list[[ff]] <- post2001fread_dat(file = post2001_Bfiles[[ff]])
+
 }
 
 
-PropertySales20012017 <- rbindlist(PropertySales20012017, use.names = TRUE, fill = TRUE)
+PropertySales20012017 <-
+  rbindlist(PropertySales20012017.list, use.names = TRUE, fill = TRUE)
 
 for (j in seq_along(PropertySales20012017)) {
   v <- PropertySales20012017[[j]]
   if (is.character(v)) {
     set(PropertySales20012017, j = j, value = if_else(v == "", NA_character_, v))
   }
+  rm(v)
 }
 drop_empty_cols(PropertySales20012017)
-PropertySales20012017 <- rbindlist(PropertySales20012017, use.names = TRUE, fill = TRUE)
 
 # Convert all areas to square-metres
 PropertySales20012017 %>%
   .[, Area_sqm := Area] %>%
   .[Area_units == "H", Area_sqm := 10e3 * Area] %>%
   drop_cols(c("Area", "Area_units"))
+
+# Convert typos in Date fields to probable values
+CURRENT.YEAR <- year(now())
+
+testthat::expect_false(any(year(PropertySales20012017[["Download_datetime"]]) > CURRENT.YEAR))
+
+PropertySales20012017 %>%
+  .[and(year(Settlement_date) == 2018,
+        year(Download_datetime) == 2001),
+    Settlement_date := Settlement_date - years(17)] %>%
+  .[and(year(Settlement_date) == 2020,
+        year(Download_datetime) == 2001),
+    Settlement_date := Settlement_date - years(19)] %>%
+  # Give up
+  .[year(Settlement_date) > CURRENT.YEAR,
+    Settlement_date := Settlement_date - years(year(Settlement_date) - year(Download_datetime))]
+
+drop_col(PropertySales20012017, "Record_type")
+setorder(PropertySales20012017, Settlement_date, Property_id)
+
+
+# Dealing no is almost 1/6th the size
+# This doesn't lose much, but cuts down the size
+# by 152 MB
+DEALING_ID_by_Dealing_no <-
+  PropertySales20012017[, .(Dealing_no)] %>%
+  unique %>%
+  .[, DEALING_ID := .I] %>%
+  .[]
+
+PropertySales20012017 <- DEALING_ID_by_Dealing_no[PropertySales20012017, on = "Dealing_no"]
+PropertySales20012017[, "Dealing_no" := NULL]
+
+set_cols_first(PropertySales20012017, c("Settlement_date", "Property_id"))
+
 
 devtools::use_data(PropertySales20012017)
 
