@@ -3,7 +3,9 @@ library(magrittr)
 library(tools)
 library(hutils)
 
-
+download.file <- function(...) {
+    utils::download.file(..., mode = "wb")
+  }
 
 "http://www.valuergeneral.nsw.gov.au/__psi/yearly/2017.zip" %>%
   download.file(destfile = "data-raw/2017/2017.zip")
