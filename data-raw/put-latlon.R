@@ -3,6 +3,7 @@ library(magrittr)
 library(fastmatch)
 library(hutils)
 library(data.table)
+library(Census)
 library(Census2016.DataPack)
 library(ASGS)
 library(PSMA)
@@ -77,8 +78,27 @@ DT_Low_density <-
   .[, fillColor := gpal_v(avg_purchase_price)] %>%
   .[, labelTitle := paste0(as.character(SA2_NAME16), " avg purchase price")] %>%
   .[, labelText := grattan_dollar(avg_purchase_price)] %>%
+  .[as.data.table(SA2_2016@data)[, I := .I], on = "SA2_NAME16"] %>%
+  .[, fillColor := coalesce(fillColor, "#FFFFFF")] %>%
   .[]
 
+# for (j in c("fillColor", "labelTitle", "labelText")) {
+#   set(DT_Low_density, j = j, value = coalesce(.subset2(DT_Low_density, j), ))
+# }
+
 grattan_leaflet(DT_Low_density, simple = TRUE, Year = "2016")
+
+leaflet(ASGS::SA2_2016_simple) %>%
+  addPolygons(fillColor = DT_Low_density[["fillColor"]],
+              stroke = TRUE,
+              opacity = 0.5,
+              weight = 0.75,
+              color = theGrey,
+              label =  lapply(paste0("<b>",
+                                     DT_Low_density[["labelTitle"]], ":",
+                                     "</b><br>",
+                                     DT_Low_density[["labelText"]]),
+                              htmltools::HTML),
+              fillOpacity = 1)
 
 

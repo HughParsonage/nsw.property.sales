@@ -103,6 +103,7 @@ PropertySales2018[, "Dealing_no" := NULL]
 set_cols_first(PropertySales2018, c("Settlement_date", "Property_id"))
 
 cat("\n")
+fwrite(PropertySales2018, "tsv/PropertySales2018.tsv", sep = "\t")
 devtools::use_data(PropertySales2018, overwrite = TRUE, compress = "xz")
 
 
