@@ -102,6 +102,23 @@ PropertySales2018[, "Dealing_no" := NULL]
 
 set_cols_first(PropertySales2018, c("Settlement_date", "Property_id"))
 
+
+# Misc case-by-case changes
+## Some typos like 0216 instead of 2016
+fix_DarkAge_ContractDates <- function(wrong, right) {
+  PropertySales2018[year(Contract_date) == wrong,
+                    Contract_date := as.Date(paste0(right,
+                                                    "-",
+                                                    month(Contract_date),
+                                                    "-",
+                                                    mday(Contract_date)))]
+}
+fix_DarkAge_ContractDates(0216L, 2016)
+fix_DarkAge_ContractDates(0218L, 2018)
+fix_DarkAge_ContractDates(1016L, 2016)
+fix_DarkAge_ContractDates(1018L, 2018)
+fix_DarkAge_ContractDates(1028L, 2018)
+
 cat("\n")
 fwrite(PropertySales2018, "tsv/PropertySales2018.tsv", sep = "\t")
 devtools::use_data(PropertySales2018, overwrite = TRUE, compress = "xz")
