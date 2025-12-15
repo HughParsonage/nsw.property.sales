@@ -173,13 +173,7 @@ process_post2001 <- function(all_b_file, year) {
     setorder(dat, Settlement_date, Property_id)
   }
 
-  # Convert Dealing_no to DEALING_ID (per-year IDs)
-  if ("Dealing_no" %in% names(dat)) {
-    dealing_map <- dat[, .(Dealing_no)] |> unique()
-    dealing_map[, DEALING_ID := .I]
-    dat <- dealing_map[dat, on = "Dealing_no"]
-    dat[, Dealing_no := NULL]
-  }
+  # Keep original Dealing_no (per-year DEALING_ID would break surrogate key purpose)
 
   # Reorder columns
   first_cols <- c("Settlement_date", "Property_id")
