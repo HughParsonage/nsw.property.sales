@@ -210,3 +210,96 @@ summarize_date_corrections <- function(dt) {
 
   return(summary_dt)
 }
+
+# --- Self-tests (run on source) ---
+local({
+  # Test data with known typos
+  test_dt <- data.table(
+    Contract_date = as.Date(c(
+      "2023-06-15",   # Valid - no correction (code 0)
+      "1915-03-20",   # Century typo -> 2015 (code 1)
+      "0019-08-10",   # Leading-zero -> 2019 (code 2)
+      "1023-11-25",   # Leading-one -> 2023 (code 3)
+      "1500-01-01",   # Ancient - unfixable (code 9)
+      NA              # NA - unchanged
+    )),
+    Settlement_date = as.Date(c(
+      "2023-07-01",
+      "2015-04-01",
+      "2019-09-01",
+      "2023-12-01",
+      "2024-01-15",
+      NA
+    )),
+    Download_datetime = as.POSIXct(c(
+      "2023-08-01 10:00:00",
+      "2015-05-01 10:00:00",
+      "2019-10-01 10:00:00",
+      "2024-01-01 10:00:00",
+      "2024-02-01 10:00:00",
+      "2024-01-01 10:00:00"
+    ))
+  )
+
+  result <- correct_dates_post2001(test_dt)
+
+  # Code 0: Valid date unchanged
+
+  stopifnot(result$Contract_date[1] == as.Date("2023-06-15"))
+  stopifnot(result$Date_correction_code[1] == 0L)
+
+ # Code 1: Century typo 1915 -> 2015
+  stopifnot(result$Contract_date[2] == as.Date("2015-03-20"))
+  stopifnot(result$Date_correction_code[2] == 1L)
+
+  # Code 2: Leading-zero 0019 -> 2019
+  stopifnot(result$Contract_date[3] == as.Date("2019-08-10"))
+  stopifnot(result$Date_correction_code[3] == 2L)
+
+  # Code 3: Leading-one 1023 -> 2023
+  stopifnot(result$Contract_date[4] == as.Date("2023-11-25"))
+  stopifnot(result$Date_correction_code[4] == 3L)
+
+  # Code 9: Ancient date -> NA
+  stopifnot(is.na(result$Contract_date[5]))
+  stopifnot(result$Date_correction_code[5] == 9L)
+
+  # NA input unchanged
+  stopifnot(is.na(result$Contract_date[6]))
+
+  # Test swap logic (code 5)
+  swap_dt <- data.table(
+    Contract_date = as.Date("2023-09-01"),    # After settlement
+    Settlement_date = as.Date("2023-06-01"),  # Before contract
+    Download_datetime = as.POSIXct("2024-01-01 10:00:00")
+  )
+  swap_result <- correct_dates_post2001(swap_dt)
+  stopifnot(swap_result$Contract_date[1] == as.Date("2023-06-01"))
+  stopifnot(swap_result$Settlement_date[1] == as.Date("2023-09-01"))
+  stopifnot(swap_result$Date_correction_code[1] == 5L)
+
+  # Test download bounding (code 4)
+  bound_dt <- data.table(
+    Contract_date = as.Date("2023-01-01"),
+    Settlement_date = as.Date("2025-06-01"),  # After download
+    Download_datetime = as.POSIXct("2024-01-15 10:00:00")
+  )
+  bound_result <- correct_dates_post2001(bound_dt)
+  # Settlement capped to Download_datetime (as.Date uses UTC, may shift day)
+  stopifnot(bound_result$Settlement_date[1] <= as.Date("2024-01-15"))
+  stopifnot(bound_result$Settlement_date[1] >= as.Date("2024-01-14"))
+  stopifnot(bound_result$Date_correction_code[1] == 4L)
+
+  # Test pre-2001 function
+  # For pre-2001 data, corrections to 20XX years exceed file_year, so mainly validation
+  pre2001_dt <- data.table(
+    Contract_date = as.Date(c("1995-06-15", "1500-03-20"))
+  )
+  pre2001_result <- correct_dates_pre2001(pre2001_dt, file_year = 1998)
+  # Valid date unchanged
+  stopifnot(pre2001_result$Contract_date[1] == as.Date("1995-06-15"))
+  stopifnot(pre2001_result$Date_correction_code[1] == 0L)
+  # Ancient date -> NA (code 9)
+  stopifnot(is.na(pre2001_result$Contract_date[2]))
+  stopifnot(pre2001_result$Date_correction_code[2] == 9L)
+})
