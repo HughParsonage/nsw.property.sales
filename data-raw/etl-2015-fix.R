@@ -64,13 +64,7 @@ cat("Deduplicated:", before, "->", after, "\n")
 # Order
 setorder(dat, Settlement_date, Property_id)
 
-# DEALING_ID
-if ("Dealing_no" %in% names(dat)) {
-  dealing_map <- dat[, .(Dealing_no)] |> unique()
-  dealing_map[, DEALING_ID := .I]
-  dat <- dealing_map[dat, on = "Dealing_no"]
-  dat[, Dealing_no := NULL]
-}
+# Keep original Dealing_no (per-year DEALING_ID would break surrogate key purpose)
 
 # Reorder columns
 setcolorder(dat, c("Settlement_date", "Property_id"))
