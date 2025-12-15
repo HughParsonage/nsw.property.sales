@@ -14,6 +14,7 @@ library(magrittr)
 stopifnot(file.exists("DESCRIPTION"))
 
 source("data-raw/pre2001_fread_dat.R")
+source("data-raw/date-correction.R")
 
 BASE_URL <- "https://www.valuergeneral.nsw.gov.au/__psi/yearly/"
 WEEKLY_PSI_DIR <- "data-raw/Weekly-PSI"
@@ -81,6 +82,10 @@ process_pre2001_year <- function(year) {
   if ("Contract_date" %in% names(dat) && is.character(dat$Contract_date)) {
     dat[, Contract_date := dmy(Contract_date)]
   }
+
+  # Apply date corrections with tracking
+  # See data-raw/date-correction.R for correction codes
+  dat <- correct_dates_pre2001(dat, file_year = year)
 
   # Remove columns as per existing logic
   drop_these <- intersect(c("Record_type", "Valuation_num"), names(dat))

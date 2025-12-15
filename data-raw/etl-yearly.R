@@ -23,6 +23,7 @@ provide.dir("tsv")
 # Source parsing functions
 source("data-raw/post2001fread_dat.R")
 source("data-raw/pre2001_fread_dat.R")
+source("data-raw/date-correction.R")
 
 #' Download and extract yearly archive
 #' @param year Integer year
@@ -138,27 +139,9 @@ process_post2001 <- function(all_b_file, year) {
     dat[, c("Area", "Area_units") := NULL]
   }
 
-  # Fix settlement date typos
-  CURRENT_YEAR <- year(Sys.Date())
-  if ("Settlement_date" %in% names(dat)) {
-    dat[year(Settlement_date) > CURRENT_YEAR,
-        Settlement_date := Settlement_date - years(year(Settlement_date) - CURRENT_YEAR)]
-  }
-
-  # Fix contract date typos (common patterns: 0YYY -> 2YYY, 1YYY -> 20YY)
-  if ("Contract_date" %in% names(dat)) {
-    fix_year <- function(wrong, right) {
-      dat[year(Contract_date) == wrong,
-          Contract_date := as.Date(paste0(right, "-",
-                                          month(Contract_date), "-",
-                                          mday(Contract_date)))]
-    }
-    # Typos like 0219 -> 2019
-    for (y in 15:25) {
-      fix_year(as.integer(paste0("02", y)), as.integer(paste0("20", y)))
-      fix_year(as.integer(paste0("10", y)), as.integer(paste0("20", y)))
-    }
-  }
+  # Apply date corrections with tracking
+  # See data-raw/date-correction.R for correction codes
+  dat <- correct_dates_post2001(dat)
 
   # Remove Record_type column
   if ("Record_type" %in% names(dat)) {
