@@ -161,11 +161,7 @@ correct_dates_post2001 <- function(dt) {
   dt[, Date_correction_code := 0L]
 
   # Get reference year from Download_datetime
-  dt[, ref_year := fifelse(
-    is.na(Download_datetime),
-    MAX_VALID_YEAR,
-    as.integer(year(Download_datetime))
-  )]
+  dt[, ref_year := fcoalesce(as.integer(year(Download_datetime)), MAX_VALID_YEAR)]
 
   # Correct Settlement_date
   if ("Settlement_date" %in% names(dt)) {
