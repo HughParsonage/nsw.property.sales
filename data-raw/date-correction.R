@@ -20,10 +20,26 @@
 #' Download_datetime is system-generated and reliable.
 #' Logical constraint: Contract_date <= Settlement_date <= Download_datetime
 #'
-#' See NSW Valuer General documentation:
-#' - data-raw/pdf/Current_Property_Sales_Data_File_Format_2001_to_Current.pdf
-#' - data-raw/pdf/Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf
-#' - data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
+#' NSW Valuer General documentation:
+#'
+#' Property_Sales_Data_File_-_Data_Elements_V3.pdf (p.1):
+#'   Contract Date: "The calendar date on which contracts were exchanged
+#'   as recorded in the Register of Land Values and sourced from the
+#'   Notice of Sale."
+#'   Settlement Date: "The calendar date on which a contract was settled
+#'   as recorded in the Register of Land Values and sourced from the
+#'   Notice of Sale."
+#'
+#' Current_Property_Sales_Data_File_Format_2001_to_Current.pdf (p.2):
+#'   Contract Date: "Date", Field Size 8, Required Y, "Format is CCYYMMDD"
+#'   Settlement Date: "Date", Field Size 8, Required Y, "Format is CCYYMMDD"
+#'   Download Date / Time: "Date", Field Size 16, Required Y,
+#'   "The Date / Time for the creation of this file. Format is CCYYMMDD HH24:MI"
+#'
+#' Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf (p.1):
+#'   Contract_date: "Date", Field Size 10, "The calendar date on which
+#'   contracts were exchanged as recorded in the Register of Land Values
+#'   and sourced from the Notice of Sale. Format is CCYYMMDD"
 
 library(data.table)
 library(lubridate)

@@ -7,8 +7,12 @@
 # with a different schema than post-2001 data.
 #
 # Schema reference:
-#   data-raw/pdf/Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf
-#   data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
+#   Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf (p.1):
+#     Record type 'B': "will contain property and sales information."
+#     Contract_date: Field Size 10, "The calendar date on which contracts
+#       were exchanged as recorded in the Register of Land Values and
+#       sourced from the Notice of Sale. Format is CCYYMMDD"
+#   Note: Pre-2001 format has no Settlement_date field.
 
 library(data.table)
 library(lubridate)

@@ -8,8 +8,13 @@
 #        Rscript --vanilla data-raw/etl-yearly.R 2023   # Process single year
 #
 # Schema reference:
-#   data-raw/pdf/Current_Property_Sales_Data_File_Format_2001_to_Current.pdf
-#   data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
+#   Current_Property_Sales_Data_File_Format_2001_to_Current.pdf (p.1-2):
+#     Record type 'B': "will contain property address and sales information."
+#     Contract Date: Field Size 8, Required Y, "Format is CCYYMMDD"
+#     Settlement Date: Field Size 8, Required Y, "Format is CCYYMMDD"
+#   Property_Sales_Data_File_-_Data_Elements_V3.pdf (p.1):
+#     Contract Date: "sourced from the Notice of Sale"
+#     Settlement Date: "sourced from the Notice of Sale"
 
 library(data.table)
 library(lubridate)
