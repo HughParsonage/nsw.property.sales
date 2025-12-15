@@ -50,105 +50,69 @@ library(lubridate)
 # Constants
 MIN_VALID_YEAR <- 1788L
 MAX_VALID_YEAR <- as.integer(year(Sys.Date()))
-RECENT_YEAR_THRESHOLD <- 2000L  # Years >= this are "recent"
 
-#' Detect typo pattern in a year
-#' @param yr Integer year value
-#' @param reference_year Integer year to use as reference (e.g., from Download_datetime)
-#' @return List with corrected_year and correction_code
-detect_year_typo <- function(yr, reference_year = MAX_VALID_YEAR) {
-  if (is.na(yr)) {
-    return(list(corrected = NA_integer_, code = 0L))
-  }
+#' Correct a date column in place using vectorized operations
+#' @param dt data.table
+#' @param date_col Name of date column to correct
+#' @param code_col Name of column to store correction codes
+#' @param max_year Maximum valid year (for bounding)
+correct_date_column <- function(dt, date_col, code_col, max_year = MAX_VALID_YEAR) {
+  if (!date_col %in% names(dt)) return(invisible(NULL))
 
-  # Valid year - no correction needed
-  if (yr >= MIN_VALID_YEAR && yr <= MAX_VALID_YEAR) {
-    return(list(corrected = yr, code = 0L))
-  }
+  date_vec <- dt[[date_col]]
+  yr <- year(date_vec)
+  mm <- month(date_vec)
+  dd <- mday(date_vec)
 
-  # Pattern 1: Century typo (19XX -> 20XX)
-  # e.g., 1915 should be 2015, 1923 should be 2023
-  if (yr >= 1900L && yr <= 1999L) {
-    suffix <- yr - 1900L  # e.g., 1915 -> 15
-    candidate <- 2000L + suffix  # e.g., 2015
-    # Only correct if the candidate is plausible (within data range)
-    if (candidate >= RECENT_YEAR_THRESHOLD && candidate <= reference_year) {
-      return(list(corrected = candidate, code = 1L))
-    }
+  # Initialize codes to 0 (no correction)
+  codes <- rep(0L, length(date_vec))
+  new_dates <- date_vec
+
+  # Pattern 1: Century typo (19XX -> 20XX) where XX suggests recent year
+  # e.g., 1915 -> 2015, 1923 -> 2023
+  idx <- which(yr >= 1900L & yr <= 1999L & (yr - 1900L + 2000L) <= max_year)
+  if (length(idx) > 0) {
+    corrected_yr <- yr[idx] - 1900L + 2000L
+    new_dates[idx] <- as.Date(paste0(corrected_yr, "-", mm[idx], "-", dd[idx]))
+    codes[idx] <- 1L
   }
 
   # Pattern 2: Leading-zero typo (0YYY -> 20YY)
-  # e.g., 0219 should be 2019, 0115 should be 2015
-  if (yr >= 0L && yr <= 999L) {
-    # Interpret as 20YY where YY is the last two digits
-    suffix <- yr %% 100L
-    candidate <- 2000L + suffix
-    if (candidate >= RECENT_YEAR_THRESHOLD && candidate <= reference_year) {
-      return(list(corrected = candidate, code = 2L))
-    }
+  # e.g., 0219 -> 2019, 0023 -> 2023
+  idx <- which(yr >= 0L & yr <= 999L & (yr %% 100L + 2000L) <= max_year)
+  if (length(idx) > 0) {
+    corrected_yr <- yr[idx] %% 100L + 2000L
+    new_dates[idx] <- as.Date(paste0(corrected_yr, "-", mm[idx], "-", dd[idx]))
+    codes[idx] <- 2L
   }
 
   # Pattern 3: Leading-one typo (10YY -> 20YY)
-  # e.g., 1019 should be 2019, 1023 should be 2023
-  if (yr >= 1000L && yr <= 1099L) {
-    suffix <- yr - 1000L  # e.g., 1019 -> 19
-    candidate <- 2000L + suffix
-    if (candidate >= RECENT_YEAR_THRESHOLD && candidate <= reference_year) {
-      return(list(corrected = candidate, code = 3L))
-    }
+  # e.g., 1019 -> 2019, 1023 -> 2023
+  idx <- which(yr >= 1000L & yr <= 1099L & (yr - 1000L + 2000L) <= max_year)
+  if (length(idx) > 0) {
+    corrected_yr <- yr[idx] - 1000L + 2000L
+    new_dates[idx] <- as.Date(paste0(corrected_yr, "-", mm[idx], "-", dd[idx]))
+    codes[idx] <- 3L
   }
 
-  # Pattern: Future year (bounded by reference)
-  if (yr > MAX_VALID_YEAR && yr <= MAX_VALID_YEAR + 100L) {
-    # Could be a typo like 2025 when we're in 2024
-    # Try to infer correct year
-    suffix <- yr %% 100L
-    candidate <- 2000L + suffix
-    if (candidate <= reference_year) {
-      return(list(corrected = candidate, code = 4L))
-    } else {
-      # Can't determine, use reference year as bound
-
-      return(list(corrected = reference_year, code = 4L))
-    }
+  # Pattern 9: Unfixable (ancient dates we can't interpret)
+  idx <- which(!is.na(yr) & yr < MIN_VALID_YEAR & codes == 0L)
+  if (length(idx) > 0) {
+    new_dates[idx] <- as.Date(NA)
+    codes[idx] <- 9L
   }
 
-  # Unfixable - ancient dates or ambiguous
-  return(list(corrected = NA_integer_, code = 9L))
-}
+  # Update the data.table
+  set(dt, j = date_col, value = new_dates)
 
-#' Correct a date value
-#' @param date_val Date value
-#' @param reference_year Integer year for bounding
-#' @return List with corrected_date and correction_code
-correct_date <- function(date_val, reference_year = MAX_VALID_YEAR) {
-  if (is.na(date_val)) {
-    return(list(corrected = as.Date(NA), code = 0L))
+  # Update or create code column (keep max code if already exists)
+  if (code_col %in% names(dt)) {
+    set(dt, j = code_col, value = pmax(dt[[code_col]], codes))
+  } else {
+    set(dt, j = code_col, value = codes)
   }
 
-  yr <- year(date_val)
-  result <- detect_year_typo(yr, reference_year)
-
-  if (result$code == 0L) {
-    return(list(corrected = date_val, code = 0L))
-  }
-
-  if (is.na(result$corrected)) {
-    return(list(corrected = as.Date(NA), code = result$code))
-  }
-
-  # Reconstruct date with corrected year
-  corrected_date <- tryCatch({
-    as.Date(paste0(result$corrected, "-", month(date_val), "-", mday(date_val)))
-  }, error = function(e) {
-    as.Date(NA)
-  })
-
-  if (is.na(corrected_date)) {
-    return(list(corrected = as.Date(NA), code = 9L))
-  }
-
-  return(list(corrected = corrected_date, code = result$code))
+  invisible(NULL)
 }
 
 #' Apply date corrections to a data.table (post-2001 format)
@@ -157,72 +121,47 @@ correct_date <- function(date_val, reference_year = MAX_VALID_YEAR) {
 correct_dates_post2001 <- function(dt) {
   dt <- copy(dt)
 
-  # Initialize correction code (will track highest severity correction)
+  # Initialize correction code
   dt[, Date_correction_code := 0L]
 
-  # Get reference year from Download_datetime
-  dt[, ref_year := fcoalesce(as.integer(year(Download_datetime)), MAX_VALID_YEAR)]
+  # Get max valid year from Download_datetime where available
+  max_year <- fcoalesce(as.integer(max(year(dt$Download_datetime), na.rm = TRUE)), MAX_VALID_YEAR)
 
   # Correct Settlement_date
-  if ("Settlement_date" %in% names(dt)) {
-    dt[, c("Settlement_date_new", "settle_code") := {
-      res <- mapply(correct_date, Settlement_date, ref_year, SIMPLIFY = FALSE)
-      list(
-        as.Date(sapply(res, `[[`, "corrected"), origin = "1970-01-01"),
-        sapply(res, `[[`, "code")
-      )
-    }]
-    dt[settle_code > 0L, Settlement_date := Settlement_date_new]
-    dt[, Date_correction_code := pmax(Date_correction_code, settle_code)]
-    dt[, c("Settlement_date_new", "settle_code") := NULL]
-  }
+  correct_date_column(dt, "Settlement_date", "Date_correction_code", max_year)
 
   # Correct Contract_date
-  if ("Contract_date" %in% names(dt)) {
-    dt[, c("Contract_date_new", "contract_code") := {
-      res <- mapply(correct_date, Contract_date, ref_year, SIMPLIFY = FALSE)
-      list(
-        as.Date(sapply(res, `[[`, "corrected"), origin = "1970-01-01"),
-        sapply(res, `[[`, "code")
-      )
-    }]
-    dt[contract_code > 0L, Contract_date := Contract_date_new]
-    dt[, Date_correction_code := pmax(Date_correction_code, contract_code)]
-    dt[, c("Contract_date_new", "contract_code") := NULL]
-  }
+  correct_date_column(dt, "Contract_date", "Date_correction_code", max_year)
 
-  # Check Contract_date <= Settlement_date constraint
+  # Check Contract_date <= Settlement_date (swap if needed)
   if (all(c("Contract_date", "Settlement_date") %in% names(dt))) {
-    # If Contract > Settlement and both are valid, swap them (code 5)
-    swap_rows <- which(
-      !is.na(dt$Contract_date) &
-      !is.na(dt$Settlement_date) &
-      dt$Contract_date > dt$Settlement_date &
-      year(dt$Contract_date) >= MIN_VALID_YEAR &
-      year(dt$Settlement_date) >= MIN_VALID_YEAR
-    )
-    if (length(swap_rows) > 0) {
-      dt[swap_rows, c("Contract_date", "Settlement_date") :=
-           .(Settlement_date, Contract_date)]
-      dt[swap_rows, Date_correction_code := pmax(Date_correction_code, 5L)]
+    needs_swap <- !is.na(dt$Contract_date) &
+                  !is.na(dt$Settlement_date) &
+                  dt$Contract_date > dt$Settlement_date &
+                  year(dt$Contract_date) >= MIN_VALID_YEAR &
+                  year(dt$Settlement_date) >= MIN_VALID_YEAR
+
+    if (any(needs_swap)) {
+      # Swap the dates
+      tmp <- dt$Contract_date[needs_swap]
+      set(dt, i = which(needs_swap), j = "Contract_date", value = dt$Settlement_date[needs_swap])
+      set(dt, i = which(needs_swap), j = "Settlement_date", value = tmp)
+      dt[needs_swap, Date_correction_code := pmax(Date_correction_code, 5L)]
     }
   }
 
-  # Check Settlement_date <= Download_datetime constraint
+  # Check Settlement_date <= Download_datetime (cap if exceeded)
   if (all(c("Settlement_date", "Download_datetime") %in% names(dt))) {
-    # If Settlement > Download (impossible), cap at Download
-    exceed_rows <- which(
-      !is.na(dt$Settlement_date) &
-      !is.na(dt$Download_datetime) &
-      dt$Settlement_date > as.Date(dt$Download_datetime)
-    )
-    if (length(exceed_rows) > 0) {
-      dt[exceed_rows, Settlement_date := as.Date(Download_datetime)]
-      dt[exceed_rows, Date_correction_code := pmax(Date_correction_code, 4L)]
+    exceeds_download <- !is.na(dt$Settlement_date) &
+                        !is.na(dt$Download_datetime) &
+                        dt$Settlement_date > as.Date(dt$Download_datetime)
+
+    if (any(exceeds_download)) {
+      set(dt, i = which(exceeds_download), j = "Settlement_date",
+          value = as.Date(dt$Download_datetime[exceeds_download]))
+      dt[exceeds_download, Date_correction_code := pmax(Date_correction_code, 4L)]
     }
   }
-
-  dt[, ref_year := NULL]
 
   return(dt)
 }
@@ -237,24 +176,11 @@ correct_dates_pre2001 <- function(dt, file_year) {
   # Initialize correction code
   dt[, Date_correction_code := 0L]
 
-  # For pre-2001, use file_year as reference
-  reference_year <- as.integer(file_year)
+  # For pre-2001, use file_year as max reference
+  max_year <- as.integer(file_year)
 
   # Correct Contract_date
-  if ("Contract_date" %in% names(dt)) {
-    dt[, c("Contract_date_new", "contract_code") := {
-      res <- mapply(correct_date, Contract_date,
-                    MoreArgs = list(reference_year = reference_year),
-                    SIMPLIFY = FALSE)
-      list(
-        as.Date(sapply(res, `[[`, "corrected"), origin = "1970-01-01"),
-        sapply(res, `[[`, "code")
-      )
-    }]
-    dt[contract_code > 0L, Contract_date := Contract_date_new]
-    dt[, Date_correction_code := contract_code]
-    dt[, c("Contract_date_new", "contract_code") := NULL]
-  }
+  correct_date_column(dt, "Contract_date", "Date_correction_code", max_year)
 
   return(dt)
 }
