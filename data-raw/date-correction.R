@@ -18,7 +18,10 @@
 #' @section Schema Reference:
 #' Date fields are CCYYMMDD format from Notice of Sale (human-entered).
 #' Download_datetime is system-generated and reliable.
-#' Logical constraint: Contract_date <= Settlement_date <= Download_datetime
+#'
+#' Inferred constraint: Contract_date <= Settlement_date <= Download_datetime
+#' (Not explicitly stated in documentation, but follows from definitions:
+#' contracts must be exchanged before settled, and settled before file created.)
 #'
 #' NSW Valuer General documentation:
 #'
