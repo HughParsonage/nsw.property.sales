@@ -29,4 +29,10 @@ Weekly-PSI/*
 *.DAT
 *.zip
 # *.*
+*creative_commons.txt
+*.tsv
+*.html
+*.png
+*.css
+*.jpg
 
