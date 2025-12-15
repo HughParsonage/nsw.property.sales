@@ -10,6 +10,7 @@ library(hutils)
 
 stopifnot(file.exists("DESCRIPTION"))
 source("data-raw/post2001fread_dat.R")
+source("data-raw/date-correction.R")
 
 WEEKLY_PSI_DIR <- "data-raw/Weekly-PSI"
 year_dir <- file.path(WEEKLY_PSI_DIR, "2015_full")
@@ -45,22 +46,8 @@ if (all(c("Area", "Area_units") %in% names(dat))) {
   dat[, c("Area", "Area_units") := NULL]
 }
 
-# Fix date typos
-CURRENT_YEAR <- year(Sys.Date())
-dat[year(Settlement_date) > CURRENT_YEAR,
-    Settlement_date := Settlement_date - years(year(Settlement_date) - CURRENT_YEAR)]
-
-# Fix contract date typos
-fix_year <- function(wrong, right) {
-  dat[year(Contract_date) == wrong,
-      Contract_date := as.Date(paste0(right, "-",
-                                      month(Contract_date), "-",
-                                      mday(Contract_date)))]
-}
-for (y in 14:16) {
-  fix_year(as.integer(paste0("02", y)), as.integer(paste0("20", y)))
-  fix_year(as.integer(paste0("10", y)), as.integer(paste0("20", y)))
-}
+# Apply date corrections with tracking
+dat <- correct_dates_post2001(dat)
 
 # Remove Record_type
 if ("Record_type" %in% names(dat)) {
