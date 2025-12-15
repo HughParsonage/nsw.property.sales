@@ -19,6 +19,11 @@
 #' Date fields are CCYYMMDD format from Notice of Sale (human-entered).
 #' Download_datetime is system-generated and reliable.
 #' Logical constraint: Contract_date <= Settlement_date <= Download_datetime
+#'
+#' See NSW Valuer General documentation:
+#' - data-raw/pdf/Current_Property_Sales_Data_File_Format_2001_to_Current.pdf
+#' - data-raw/pdf/Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf
+#' - data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
 
 library(data.table)
 library(lubridate)

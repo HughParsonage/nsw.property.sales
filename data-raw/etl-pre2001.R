@@ -5,6 +5,10 @@
 #
 # The pre-2001 archives contain ARCHIVE_SALES_YYYY.DAT files
 # with a different schema than post-2001 data.
+#
+# Schema reference:
+#   data-raw/pdf/Archived_Property_Sales_Data_File_Format_1990_to_2001_V2.pdf
+#   data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
 
 library(data.table)
 library(lubridate)

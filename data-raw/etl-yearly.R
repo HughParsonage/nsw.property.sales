@@ -6,6 +6,10 @@
 # Usage: Rscript --vanilla data-raw/etl-yearly.R [year]
 #        Rscript --vanilla data-raw/etl-yearly.R        # Process all years
 #        Rscript --vanilla data-raw/etl-yearly.R 2023   # Process single year
+#
+# Schema reference:
+#   data-raw/pdf/Current_Property_Sales_Data_File_Format_2001_to_Current.pdf
+#   data-raw/pdf/Property_Sales_Data_File_-_Data_Elements_V3.pdf
 
 library(data.table)
 library(lubridate)
